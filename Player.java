@@ -62,26 +62,28 @@ class Player {
                 int value = in.nextInt(); // amount of points this pellet is worth
                 listeCells.add(new Cellule(x, y, value));
             }
-
-            // Write an action using System.out.println()
-            // To debug: System.err.println("Debug messages...");
+            /**
+             
+             // Write an action using System.out.println()
+             // To debug: System.err.println("Debug messages...");
             // System.err.println("targetedCell -> " + targetedCell);
             // System.err.println("x, y, value -> " + currentX + ", " + currentY);
-
+            
             // FIXME a remplacer if (targetedCell != null && currentX == targetedCell.getX() && currentY == targetedCell.getY()) {
-            //     targetedCell = null;
+                //     targetedCell = null;
             // }
-
+            
             // if (targetedCell == null) {
             //     Optional<Cellule> item = listeCells.stream().filter(c -> c.getValeur() == 10).findFirst();
             //     if (item.isPresent()) {
             //         targetedCell = item.get();
             //     } else {
-            //         targetedCell = listeCells.get(0);
+                //         targetedCell = listeCells.get(0);
             //     }
             //     listeCells.remove(targetedCell);
             // }
             // System.out.println("MOVE 0 " + targetedCell.getX() + " " + targetedCell.getY() + ""); // MOVE <pacId> <x> <y>
+            */
             System.out.println(team.move(listeCells));
 
         }
