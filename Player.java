@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,12 +9,14 @@ import java.util.Scanner;
 
 /**
  * Grab the pellets as fast as you can!
+ * seed=782918738956375040
  **/
 class Player {
 
     private static Ground ground;
     private static List<Cellule> listeCells = new ArrayList<Cellule>();
     private static Team team = new Team();
+    private static Map<Integer, List<Cellule>> carte;
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
@@ -22,8 +25,21 @@ class Player {
         if (in.hasNextLine()) {
             in.nextLine();
         }
-        for (int i = 0; i < height; i++) {
+
+        carte = new HashMap<Integer, List<Cellule>>();
+        for (int x = 0; x < width; x++) {
+            carte.put(x, new ArrayList<Cellule>());
+        }
+
+        System.err.println("w " + width + " h " + height);
+        for (int y = 0; y < height; y++) {
             String row = in.nextLine(); // one line of the grid: space " " is floor, pound "#" is wall
+            for (int x = 0; x < width; x++) {
+                String v = row.substring(x, x + 1);
+                if (!"#".equals(v)) {
+                    carte.get(x).add(new Cellule(x, y, 0));
+                }
+            }
         }
 
         ground = new Ground();
@@ -54,13 +70,15 @@ class Player {
             }*/
 
             int visiblePelletCount = in.nextInt(); // all pellets in sight
-            System.err.println("visiblePelletCount -> " + visiblePelletCount);
+            // System.err.println("visiblePelletCount -> " + visiblePelletCount);
             listeCells.clear();
             for (int i = 0; i < visiblePelletCount; i++) {
                 int x = in.nextInt();
                 int y = in.nextInt();
                 int value = in.nextInt(); // amount of points this pellet is worth
-                listeCells.add(new Cellule(x, y, value));
+                Cellule cell = new Cellule(x, y, value);
+                // System.err.println(cell);
+                listeCells.add(cell);
             }
             /**
              
@@ -84,7 +102,7 @@ class Player {
             // }
             // System.out.println("MOVE 0 " + targetedCell.getX() + " " + targetedCell.getY() + ""); // MOVE <pacId> <x> <y>
             */
-            System.out.println(team.move(listeCells));
+            System.out.println(team.action(carte));
 
         }
     }
@@ -239,7 +257,7 @@ class Team {
     }
 
     public void init(Scanner in) {
-        System.err.println("init " + team.size());
+
         int myScore = in.nextInt();
         int opponentScore = in.nextInt();
         int visiblePacCount = in.nextInt(); // all your pacs and enemy pacs in sight
@@ -264,7 +282,50 @@ class Team {
         }
     }
 
-    public String move(List<Cellule> listeCells) {
+    public String action(Map<Integer, List<Cellule>> carte) {
+
+        String result = "";
+        for (Integer pacId : team.keySet()) {
+            Pac pac = team.get(pacId);
+            if (pac == null) {
+                continue;
+            }
+
+            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
+                    && pac.getY() == pac.getTargetedCell().getY()) {
+                pac.setTargetedCell(null);
+            }
+            System.err.println("avant => " + pac.getTargetedCell());
+            if (pac.getTargetedCell() == null) {
+                int x = pac.getX() + 1;
+                if (x >= 34) {
+                    x = 0;
+                }
+                List<Cellule> cells = carte.get(x);
+
+                if (pac.getY() > 7) {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
+                } else {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
+                }
+                pac.setTargetedCell(cells.get(0));
+
+            }
+            if (result != "") {
+                result += " | ";
+            }
+            if (pac.getTargetedCell() != null) {
+                System.err.println("apres => " + pac.getTargetedCell());
+                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
+                        + pac.getTargetedCell().getY();
+            }
+
+        }
+
+        return result;
+    }
+
+    public String action(List<Cellule> listeCells) {
 
         String result = "";
         for (Integer id : team.keySet()) {
@@ -276,20 +337,26 @@ class Team {
             }
 
             if (pac.getTargetedCell() == null) {
-                Optional<Cellule> item = listeCells.stream().filter(c -> c.getValeur() == 10).findFirst();
+                Optional<Cellule> item = listeCells.stream()
+                        .filter(c -> ((c.getX() == pac.getX() && c.getY() != pac.getY())
+                                || (c.getX() != pac.getX() && c.getY() == pac.getY())))
+                        .findFirst();
                 if (item.isPresent()) {
                     pac.setTargetedCell(item.get());
                 } else {
-                    pac.setTargetedCell(listeCells.get(0));
+                    pac.setTargetedCell(null);
                 }
-                listeCells.remove(pac.getTargetedCell());
+                if (pac.getTargetedCell() != null) {
+                    listeCells.remove(pac.getTargetedCell());
+                }
             }
 
             if (result != "") {
                 result += " | ";
             }
-
-            result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " " + pac.getTargetedCell().getY();
+            if (pac.getTargetedCell() != null)
+                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
+                        + pac.getTargetedCell().getY();
         }
 
         return result;
@@ -298,6 +365,21 @@ class Team {
     public boolean isEmpty() {
         return team.isEmpty();
     }
+}
+
+class CelluleComparator implements Comparator<Cellule> {
+
+    @Override
+    public int compare(Cellule o1, Cellule o2) {
+        int result = 0;
+        if (o1.getY() > o2.getY()) {
+            result = 1;
+        } else {
+            result = -1;
+        }
+        return result;
+    }
+
 }
 
 class Ground {
