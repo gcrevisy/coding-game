@@ -48,26 +48,6 @@ class Player {
         // game loop
         while (true) {
             team.init(in);
-            /**
-            int myScore = in.nextInt();
-            int opponentScore = in.nextInt();
-            int visiblePacCount = in.nextInt(); // all your pacs and enemy pacs in sight
-            int currentX = -1;
-            int currentY = -1;
-            for (int i = 0; i < visiblePacCount; i++) {
-                int pacId = in.nextInt(); // pac number (unique within a team)
-                boolean mine = in.nextInt() != 0; // true if this pac is yours
-                if (mine) {
-                    currentX = in.nextInt(); // position in the grid
-                    currentY = in.nextInt(); // position in the grid
-                } else {
-                    in.nextInt();
-                    in.nextInt();
-                }
-                String typeId = in.next(); // unused in wood leagues
-                int speedTurnsLeft = in.nextInt(); // unused in wood leagues
-                int abilityCooldown = in.nextInt(); // unused in wood leagues
-            }*/
 
             int visiblePelletCount = in.nextInt(); // all pellets in sight
             // System.err.println("visiblePelletCount -> " + visiblePelletCount);
@@ -80,33 +60,11 @@ class Player {
                 // System.err.println(cell);
                 listeCells.add(cell);
             }
-            /**
-             
-             // Write an action using System.out.println()
-             // To debug: System.err.println("Debug messages...");
-            // System.err.println("targetedCell -> " + targetedCell);
-            // System.err.println("x, y, value -> " + currentX + ", " + currentY);
-            
-            // FIXME a remplacer if (targetedCell != null && currentX == targetedCell.getX() && currentY == targetedCell.getY()) {
-                //     targetedCell = null;
-            // }
-            
-            // if (targetedCell == null) {
-            //     Optional<Cellule> item = listeCells.stream().filter(c -> c.getValeur() == 10).findFirst();
-            //     if (item.isPresent()) {
-            //         targetedCell = item.get();
-            //     } else {
-                //         targetedCell = listeCells.get(0);
-            //     }
-            //     listeCells.remove(targetedCell);
-            // }
-            // System.out.println("MOVE 0 " + targetedCell.getX() + " " + targetedCell.getY() + ""); // MOVE <pacId> <x> <y>
-            */
+
             System.out.println(team.action(carte));
 
         }
     }
-
 }
 
 class Pac {
