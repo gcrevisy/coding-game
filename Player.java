@@ -260,8 +260,8 @@ class Team {
                 continue;
             }
 
-            Pac otherPac;
         }
+
         return result;
     }
 
