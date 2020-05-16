@@ -3,7 +3,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -13,10 +12,9 @@ import java.util.Scanner;
  **/
 class Player {
 
-    private static Ground ground;
-    private static List<Cellule> listeCells = new ArrayList<Cellule>();
-    private static Team team = new Team();
-    private static Map<Integer, List<Cellule>> carte;
+    static List<Cellule> listeCells = new ArrayList<Cellule>();
+    static Team team = new Team();
+    static Map<Integer, List<Cellule>> carte;
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
@@ -42,9 +40,6 @@ class Player {
             }
         }
 
-        ground = new Ground();
-        ground.init(in);
-
         // game loop
         while (true) {
             team.init(in);
@@ -68,13 +63,14 @@ class Player {
 }
 
 class Pac {
-    private int id;
-    private int x;
-    private int y;
-    private String typeId;
-    private int speedTurnsLeft;
-    private int abilityCooldown;
-    private Cellule targetedCell;
+    int id;
+    int x;
+    int y;
+    String typeId;
+    int speedTurnsLeft;
+    int abilityCooldown;
+    Cellule targetedCell;
+    Pac targetedPac;
 
     public Pac() {
     }
@@ -89,129 +85,15 @@ class Pac {
         this.targetedCell = targetedCell;
     }
 
-    public int getId() {
-        return this.id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getX() {
-        return this.x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return this.y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public String getTypeId() {
-        return this.typeId;
-    }
-
-    public void setTypeId(String typeId) {
-        this.typeId = typeId;
-    }
-
-    public int getSpeedTurnsLeft() {
-        return this.speedTurnsLeft;
-    }
-
-    public void setSpeedTurnsLeft(int speedTurnsLeft) {
-        this.speedTurnsLeft = speedTurnsLeft;
-    }
-
-    public int getAbilityCooldown() {
-        return this.abilityCooldown;
-    }
-
-    public void setAbilityCooldown(int abilityCooldown) {
-        this.abilityCooldown = abilityCooldown;
-    }
-
-    public Cellule getTargetedCell() {
-        return this.targetedCell;
-    }
-
-    public void setTargetedCell(Cellule targetedCell) {
-        this.targetedCell = targetedCell;
-    }
-
-    public Pac id(int id) {
-        this.id = id;
-        return this;
-    }
-
-    public Pac x(int x) {
-        this.x = x;
-        return this;
-    }
-
-    public Pac y(int y) {
-        this.y = y;
-        return this;
-    }
-
-    public Pac typeId(String typeId) {
-        this.typeId = typeId;
-        return this;
-    }
-
-    public Pac speedTurnsLeft(int speedTurnsLeft) {
-        this.speedTurnsLeft = speedTurnsLeft;
-        return this;
-    }
-
-    public Pac abilityCooldown(int abilityCooldown) {
-        this.abilityCooldown = abilityCooldown;
-        return this;
-    }
-
-    public Pac targetedCell(Cellule targetedCell) {
-        this.targetedCell = targetedCell;
-        return this;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-        if (!(o instanceof Pac)) {
-            return false;
-        }
-        Pac pac = (Pac) o;
-        return id == pac.id && x == pac.x && y == pac.y && Objects.equals(typeId, pac.typeId)
-                && speedTurnsLeft == pac.speedTurnsLeft && abilityCooldown == pac.abilityCooldown
-                && Objects.equals(targetedCell, pac.targetedCell);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, x, y, typeId, speedTurnsLeft, abilityCooldown, targetedCell);
-    }
-
-    @Override
-    public String toString() {
-        return "{" + " id='" + getId() + "'" + ", x='" + getX() + "'" + ", y='" + getY() + "'" + ", typeId='"
-                + getTypeId() + "'" + ", speedTurnsLeft='" + getSpeedTurnsLeft() + "'" + ", abilityCooldown='"
-                + getAbilityCooldown() + "'" + ", targetedCell='" + getTargetedCell() + "'" + "}";
-    }
-
 }
 
 class Team {
-    private Map<Integer, Pac> team;
+    Map<Integer, Pac> team;
+    Map<Integer, Pac> otherTeam;
 
     public Team() {
         team = new HashMap<>();
+        otherTeam = new HashMap<>();
     }
 
     public void init(Scanner in) {
@@ -233,13 +115,45 @@ class Team {
                     team.put(pacId, pac);
                 } else {
                     Pac pac = team.get(pacId);
-                    pac.setX(currentX);
-                    pac.setY(currentY);
+                    pac.x = currentX;
+                    pac.y = currentY;
+                }
+            } else {
+                if (otherTeam.get(pacId) == null) {
+                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
+                    otherTeam.put(pacId, pac);
+                } else {
+                    Pac pac = otherTeam.get(pacId);
+                    pac.x = currentX;
+                    pac.y = currentY;
                 }
             }
         }
     }
 
+    /**
+     * 
+     * @param carte
+     * @return
+     */
+    public String chasse() {
+        String result = "";
+        for (Integer pacId : team.keySet()) {
+            Pac pac = team.get(pacId);
+            if (pac == null) {
+                continue;
+            }
+
+            Pac otherPac;
+        }
+        return result;
+    }
+
+    /**
+     * Parcours des cellules.
+     * @param carte
+     * @return
+     */
     public String action(Map<Integer, List<Cellule>> carte) {
 
         String result = "";
@@ -249,33 +163,31 @@ class Team {
                 continue;
             }
 
-            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
-                    && pac.getY() == pac.getTargetedCell().getY()) {
-                pac.setTargetedCell(null);
+            if (pac.targetedCell != null && pac.x == pac.targetedCell.x && pac.y == pac.targetedCell.y) {
+                pac.targetedCell = null;
             }
-            System.err.println("avant => " + pac.getTargetedCell());
-            if (pac.getTargetedCell() == null) {
-                int x = pac.getX() + 1;
+            System.err.println("avant => " + pac.targetedCell);
+            if (pac.targetedCell == null) {
+                int x = pac.x + pac.id;
                 if (x >= 34) {
                     x = 0;
                 }
                 List<Cellule> cells = carte.get(x);
 
-                if (pac.getY() > 7) {
+                if (pac.y > 7) {
                     cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
                 } else {
                     cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
                 }
-                pac.setTargetedCell(cells.get(0));
+                pac.targetedCell = cells.get(0);
 
             }
             if (result != "") {
                 result += " | ";
             }
-            if (pac.getTargetedCell() != null) {
-                System.err.println("apres => " + pac.getTargetedCell());
-                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
-                        + pac.getTargetedCell().getY();
+            if (pac.targetedCell != null) {
+                System.err.println("apres => " + pac.targetedCell);
+                result += "MOVE " + pac.id + " " + pac.targetedCell.x + " " + pac.targetedCell.y;
             }
 
         }
@@ -283,46 +195,44 @@ class Team {
         return result;
     }
 
+    /**
+     * Parcours des cellules visibles.
+     * @param listeCells
+     * @return
+     */
     public String action(List<Cellule> listeCells) {
 
         String result = "";
         for (Integer id : team.keySet()) {
             Pac pac = team.get(id);
 
-            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
-                    && pac.getY() == pac.getTargetedCell().getY()) {
-                pac.setTargetedCell(null);
+            if (pac.targetedCell != null && pac.x == pac.targetedCell.x && pac.y == pac.targetedCell.y) {
+                pac.targetedCell = null;
             }
 
-            if (pac.getTargetedCell() == null) {
+            if (pac.targetedCell == null) {
                 Optional<Cellule> item = listeCells.stream()
-                        .filter(c -> ((c.getX() == pac.getX() && c.getY() != pac.getY())
-                                || (c.getX() != pac.getX() && c.getY() == pac.getY())))
-                        .findFirst();
+                        .filter(c -> ((c.x == pac.x && c.y != pac.y) || (c.x != pac.x && c.y == pac.y))).findFirst();
                 if (item.isPresent()) {
-                    pac.setTargetedCell(item.get());
+                    pac.targetedCell = item.get();
                 } else {
-                    pac.setTargetedCell(null);
+                    pac.targetedCell = null;
                 }
-                if (pac.getTargetedCell() != null) {
-                    listeCells.remove(pac.getTargetedCell());
+                if (pac.targetedCell != null) {
+                    listeCells.remove(pac.targetedCell);
                 }
             }
 
             if (result != "") {
                 result += " | ";
             }
-            if (pac.getTargetedCell() != null)
-                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
-                        + pac.getTargetedCell().getY();
+            if (pac.targetedCell != null)
+                result += "MOVE " + pac.id + " " + pac.targetedCell.x + " " + pac.targetedCell.y;
         }
 
         return result;
     }
 
-    public boolean isEmpty() {
-        return team.isEmpty();
-    }
 }
 
 class CelluleComparator implements Comparator<Cellule> {
@@ -330,7 +240,7 @@ class CelluleComparator implements Comparator<Cellule> {
     @Override
     public int compare(Cellule o1, Cellule o2) {
         int result = 0;
-        if (o1.getY() > o2.getY()) {
+        if (o1.y > o2.y) {
             result = 1;
         } else {
             result = -1;
@@ -340,22 +250,9 @@ class CelluleComparator implements Comparator<Cellule> {
 
 }
 
-class Ground {
-    private List<Cellule> cells;
-
-    public Ground() {
-        cells = new ArrayList<Cellule>();
-    }
-
-    public void init(Scanner in) {
-        // in.nextLine();
-
-    }
-}
-
 class Cellule {
 
-    private int x, y, valeur;
+    int x, y, valeur;
 
     public Cellule() {
     }
@@ -364,66 +261,6 @@ class Cellule {
         this.x = x;
         this.y = y;
         this.valeur = valeur;
-    }
-
-    public int getX() {
-        return this.x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return this.y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getValeur() {
-        return this.valeur;
-    }
-
-    public void setValeur(int valeur) {
-        this.valeur = valeur;
-    }
-
-    public Cellule x(int x) {
-        this.x = x;
-        return this;
-    }
-
-    public Cellule y(int y) {
-        this.y = y;
-        return this;
-    }
-
-    public Cellule valeur(int valeur) {
-        this.valeur = valeur;
-        return this;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-        if (!(o instanceof Cellule)) {
-            return false;
-        }
-        Cellule cellule = (Cellule) o;
-        return x == cellule.x && y == cellule.y && valeur == cellule.valeur;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(x, y, valeur);
-    }
-
-    @Override
-    public String toString() {
-        return "{" + " x='" + getX() + "'" + ", y='" + getY() + "'" + ", valeur='" + getValeur() + "'" + "}";
     }
 
 }
