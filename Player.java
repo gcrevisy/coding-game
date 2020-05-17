@@ -14,7 +14,8 @@ import java.util.Scanner;
 class Player {
 
     private static List<Cellule> listeCells = new ArrayList<Cellule>();
-    private static Team team = new Team();
+    private static Map<Integer, Pac> myTeam = new HashMap<Integer, Pac>();
+    private static Map<Integer, Pac> otherTeam = new HashMap<Integer, Pac>();
     private static Map<Integer, List<Cellule>> carte;
 
     public static void main(String args[]) {
@@ -43,7 +44,7 @@ class Player {
 
         // game loop
         while (true) {
-            team.init(in);
+            initTeams(in);
 
             int visiblePelletCount = in.nextInt(); // all pellets in sight
             // System.err.println("visiblePelletCount -> " + visiblePelletCount);
@@ -53,14 +54,185 @@ class Player {
                 int y = in.nextInt();
                 int value = in.nextInt(); // amount of points this pellet is worth
                 Cellule cell = new Cellule(x, y, value);
-                // System.err.println(cell);
+                System.err.println(cell);
                 listeCells.add(cell);
             }
 
-            System.out.println(team.action(carte));
+            System.out.println(action(carte, listeCells));
 
         }
     }
+
+    /**
+     * Parcours des cellules.
+     * @param carte
+     * @return
+     */
+    public static String action(Map<Integer, List<Cellule>> carte, List<Cellule> listeCells) {
+
+        String result = "";
+        for (Integer pacId : myTeam.keySet()) {
+            Pac pac = myTeam.get(pacId);
+            if (pac == null) {
+                continue;
+            }
+
+            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
+                    && pac.getY() == pac.getTargetedCell().getY()) {
+                pac.setTargetedCell(null);
+            }
+            System.err.println("avant => " + pac.getTargetedCell());
+            if (pac.getTargetedCell() == null) {
+                int x = pac.getX() + pac.getId();
+                if (x >= 34) {
+                    x = 0;
+                }
+                List<Cellule> cells = carte.get(x);
+
+                if (pac.getY() > 7) {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
+                } else {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
+                }
+                pac.setTargetedCell(cells.get(0));
+
+            }
+            if (result != "") {
+                result += " | ";
+            }
+            if (pac.getTargetedCell() != null) {
+                System.err.println("apres => " + pac.getTargetedCell());
+                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
+                        + pac.getTargetedCell().getY();
+            }
+
+        }
+
+        return result;
+    }
+
+    public static void initTeams(Scanner in) {
+
+        int myScore = in.nextInt();
+        int opponentScore = in.nextInt();
+        int visiblePacCount = in.nextInt(); // all your pacs and enemy pacs in sight
+        for (int i = 0; i < visiblePacCount; i++) {
+            int pacId = in.nextInt(); // pac number (unique within a team)
+            boolean mine = in.nextInt() != 0; // true if this pac is yours
+            int currentX = in.nextInt(); // position in the grid
+            int currentY = in.nextInt(); // position in the grid
+            String typeId = in.next(); // unused in wood leagues
+            int speedTurnsLeft = in.nextInt(); // unused in wood leagues
+            int abilityCooldown = in.nextInt(); // unused in wood leagues
+            if (mine) {
+                if (myTeam.get(pacId) == null) {
+                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
+                    myTeam.put(pacId, pac);
+                } else {
+                    myTeam.get(pacId).setX(currentX);
+                    myTeam.get(pacId).setY(currentY);
+                }
+            } else {
+                if (otherTeam.get(pacId) == null) {
+                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
+                    otherTeam.put(pacId, pac);
+                } else {
+                    otherTeam.get(pacId).setX(currentX);
+                    otherTeam.get(pacId).setY(currentY);
+                }
+            }
+        }
+    }
+}
+
+class CelluleComparator implements Comparator<Cellule> {
+
+    @Override
+    public int compare(Cellule o1, Cellule o2) {
+        int result = 0;
+        if (o1.getY() > o2.getY()) {
+            result = 1;
+        } else {
+            result = -1;
+        }
+        return result;
+    }
+
+}
+
+class Cellule {
+
+    private int x, y, valeur;
+
+    public Cellule() {
+    }
+
+    public Cellule(int x, int y, int valeur) {
+        this.x = x;
+        this.y = y;
+        this.valeur = valeur;
+    }
+
+    public int getX() {
+        return this.x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public int getY() {
+        return this.y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    public int getValeur() {
+        return this.valeur;
+    }
+
+    public void setValeur(int valeur) {
+        this.valeur = valeur;
+    }
+
+    public Cellule x(int x) {
+        this.x = x;
+        return this;
+    }
+
+    public Cellule y(int y) {
+        this.y = y;
+        return this;
+    }
+
+    public Cellule valeur(int valeur) {
+        this.valeur = valeur;
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (!(o instanceof Cellule)) {
+            return false;
+        }
+        Cellule cellule = (Cellule) o;
+        return x == cellule.x && y == cellule.y && valeur == cellule.valeur;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y, valeur);
+    }
+
+    @Override
+    public String toString() {
+        return "{" + " x='" + getX() + "'" + ", y='" + getY() + "'" + ", valeur='" + getValeur() + "'" + "}";
+    }
+
 }
 
 class Pac {
@@ -199,250 +371,6 @@ class Pac {
         return "{" + " id='" + getId() + "'" + ", x='" + getX() + "'" + ", y='" + getY() + "'" + ", typeId='"
                 + getTypeId() + "'" + ", speedTurnsLeft='" + getSpeedTurnsLeft() + "'" + ", abilityCooldown='"
                 + getAbilityCooldown() + "'" + ", targetedCell='" + getTargetedCell() + "'" + "}";
-    }
-
-}
-
-class Team {
-    private Map<Integer, Pac> team;
-    private Map<Integer, Pac> otherTeam;
-
-    public Team() {
-        team = new HashMap<>();
-        otherTeam = new HashMap<>();
-    }
-
-    public void init(Scanner in) {
-
-        int myScore = in.nextInt();
-        int opponentScore = in.nextInt();
-        int visiblePacCount = in.nextInt(); // all your pacs and enemy pacs in sight
-        for (int i = 0; i < visiblePacCount; i++) {
-            int pacId = in.nextInt(); // pac number (unique within a team)
-            boolean mine = in.nextInt() != 0; // true if this pac is yours
-            int currentX = in.nextInt(); // position in the grid
-            int currentY = in.nextInt(); // position in the grid
-            String typeId = in.next(); // unused in wood leagues
-            int speedTurnsLeft = in.nextInt(); // unused in wood leagues
-            int abilityCooldown = in.nextInt(); // unused in wood leagues
-            if (mine) {
-                if (team.get(pacId) == null) {
-                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
-                    team.put(pacId, pac);
-                } else {
-                    Pac pac = team.get(pacId);
-                    pac.setX(currentX);
-                    pac.setY(currentY);
-                }
-            } else {
-                if (otherTeam.get(pacId) == null) {
-                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
-                    otherTeam.put(pacId, pac);
-                } else {
-                    Pac pac = otherTeam.get(pacId);
-                    pac.setX(currentX);
-                    pac.setY(currentY);
-                }
-            }
-        }
-    }
-
-    /**
-     * 
-     * @param carte
-     * @return
-     */
-    public String chasse() {
-        String result = "";
-        for (Integer pacId : team.keySet()) {
-            Pac pac = team.get(pacId);
-            if (pac == null) {
-                continue;
-            }
-
-        }
-
-        return result;
-    }
-
-    /**
-     * Parcours des cellules.
-     * @param carte
-     * @return
-     */
-    public String action(Map<Integer, List<Cellule>> carte) {
-
-        String result = "";
-        for (Integer pacId : team.keySet()) {
-            Pac pac = team.get(pacId);
-            if (pac == null) {
-                continue;
-            }
-
-            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
-                    && pac.getY() == pac.getTargetedCell().getY()) {
-                pac.setTargetedCell(null);
-            }
-            System.err.println("avant => " + pac.getTargetedCell());
-            if (pac.getTargetedCell() == null) {
-                int x = pac.getX() + pac.getId();
-                if (x >= 34) {
-                    x = 0;
-                }
-                List<Cellule> cells = carte.get(x);
-
-                if (pac.getY() > 7) {
-                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
-                } else {
-                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
-                }
-                pac.setTargetedCell(cells.get(0));
-
-            }
-            if (result != "") {
-                result += " | ";
-            }
-            if (pac.getTargetedCell() != null) {
-                System.err.println("apres => " + pac.getTargetedCell());
-                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
-                        + pac.getTargetedCell().getY();
-            }
-
-        }
-
-        return result;
-    }
-
-    /**
-     * Parcours des cellules visibles.
-     * @param listeCells
-     * @return
-     */
-    public String action(List<Cellule> listeCells) {
-
-        String result = "";
-        for (Integer id : team.keySet()) {
-            Pac pac = team.get(id);
-
-            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
-                    && pac.getY() == pac.getTargetedCell().getY()) {
-                pac.setTargetedCell(null);
-            }
-
-            if (pac.getTargetedCell() == null) {
-                Optional<Cellule> item = listeCells.stream()
-                        .filter(c -> ((c.getX() == pac.getX() && c.getY() != pac.getY())
-                                || (c.getX() != pac.getX() && c.getY() == pac.getY())))
-                        .findFirst();
-                if (item.isPresent()) {
-                    pac.setTargetedCell(item.get());
-                } else {
-                    pac.setTargetedCell(null);
-                }
-                if (pac.getTargetedCell() != null) {
-                    listeCells.remove(pac.getTargetedCell());
-                }
-            }
-
-            if (result != "") {
-                result += " | ";
-            }
-            if (pac.getTargetedCell() != null)
-                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
-                        + pac.getTargetedCell().getY();
-        }
-
-        return result;
-    }
-
-}
-
-class CelluleComparator implements Comparator<Cellule> {
-
-    @Override
-    public int compare(Cellule o1, Cellule o2) {
-        int result = 0;
-        if (o1.getY() > o2.getY()) {
-            result = 1;
-        } else {
-            result = -1;
-        }
-        return result;
-    }
-
-}
-
-class Cellule {
-
-    private int x, y, valeur;
-
-    public Cellule() {
-    }
-
-    public Cellule(int x, int y, int valeur) {
-        this.x = x;
-        this.y = y;
-        this.valeur = valeur;
-    }
-
-    public int getX() {
-        return this.x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return this.y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getValeur() {
-        return this.valeur;
-    }
-
-    public void setValeur(int valeur) {
-        this.valeur = valeur;
-    }
-
-    public Cellule x(int x) {
-        this.x = x;
-        return this;
-    }
-
-    public Cellule y(int y) {
-        this.y = y;
-        return this;
-    }
-
-    public Cellule valeur(int valeur) {
-        this.valeur = valeur;
-        return this;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-        if (!(o instanceof Cellule)) {
-            return false;
-        }
-        Cellule cellule = (Cellule) o;
-        return x == cellule.x && y == cellule.y && valeur == cellule.valeur;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(x, y, valeur);
-    }
-
-    @Override
-    public String toString() {
-        return "{" + " x='" + getX() + "'" + ", y='" + getY() + "'" + ", valeur='" + getValeur() + "'" + "}";
     }
 
 }
