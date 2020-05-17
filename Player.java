@@ -19,6 +19,8 @@ class Player {
     private static Map<Integer, Pac> myTeam = new HashMap<Integer, Pac>();
     private static Map<Integer, Pac> otherTeam = new HashMap<Integer, Pac>();
 
+    private static List<Cellule> targetedCells = new ArrayList<Cellule>();
+
     private static String ROCK = "ROCK";
     private static String PAPER = "PAPER";
     private static String SCISSORS = "SCISSORS";
@@ -100,21 +102,38 @@ class Player {
             if (pac.getTargetedCell() == null) {
 
                 // ciblage des cellule a valeur 10 en priorite
+
                 List<Cellule> liste = listeVisibleCells.stream().filter(item -> item.getValeur() == 10)
                         .collect(Collectors.toList());
                 if (liste.size() > 0) {
                     Cellule targetedCell = determinerCellulePlusProche(pac, liste);
                     pac.setTargetedCell(targetedCell);
                     pac.setActionType(ActionType.MOVE);
-                    liste.remove(targetedCell);
-                    listeVisibleCells.remove(targetedCell);
-                    continue;
+                    targetedCells.add(targetedCell);
+                    if (pac.getTargetedCell() != null)
+                        continue;
                 }
 
+                System.err.println("on ne chasse pas");
+                int x = pac.getX() + pac.getId();
+                if (x >= 34) {
+                    x = 0;
+                }
+                List<Cellule> cells = carte.get(x);
+
+                if (pac.getY() > 7) {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
+                } else {
+                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
+                }
+                pac.setTargetedCell(cells.get(0));
+                pac.setActionType(ActionType.MOVE);
+
                 // chasse ?
-                if (otherTeam.size() > 0) {
-                    System.err.println("pendant => " + pac.getTargetedCell());
+                System.err.println("on chasse ?");
+                if (ActionType.NOTHING.equals(pac.getActionType()) && otherTeam.size() > 0) {
                     Pac otherPac = determinerPacPlusProche(pac, otherTeam);
+                    System.err.println(pac.getId() + " chasse " + otherPac);
                     if (ROCK.equals(otherPac.getTypeId())) {
                         pac.setTypeId(PAPER);
                         pac.setActionType(ActionType.SWITCH);
@@ -130,6 +149,7 @@ class Player {
                     }
                     pac.setTargetedCell(new Cellule(otherPac.getX(), otherPac.getY(), 0));
                     pac.setActionType(ActionType.MOVE);
+                    continue;
                 }
 
             }
@@ -148,6 +168,7 @@ class Player {
     }
 
     private static Pac determinerPacPlusProche(Pac pac, Map<Integer, Pac> liste) {
+        System.err.println("determinerPacPlusProche " + pac);
         Double proche = Double.MAX_VALUE;
         Pac result = null;
         for (Integer pacId : liste.keySet()) {
@@ -164,9 +185,13 @@ class Player {
     }
 
     private static Cellule determinerCellulePlusProche(Pac pac, List<Cellule> liste) {
+        System.err.println("determinerCellulePlusProche " + pac);
         Double proche = Double.MAX_VALUE;
         Cellule result = null;
         for (Cellule cellule : liste) {
+            if (targetedCells.contains(cellule))
+                continue;
+
             Double dist = Math.sqrt(Math.pow(Math.abs(pac.getX() - cellule.getX()), 2)
                     + Math.pow(Math.abs(pac.getY() - cellule.getY()), 2));
             if (dist < proche) {
@@ -195,7 +220,7 @@ class Player {
             if (mine) {
                 if (myTeam.get(pacId) == null) {
                     Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null,
-                            ActionType.MOVE);
+                            ActionType.NOTHING);
                     myTeam.put(pacId, pac);
                 } else {
                     myTeam.get(pacId).setX(currentX);
@@ -204,7 +229,7 @@ class Player {
             } else {
                 if (otherTeam.get(pacId) == null) {
                     Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null,
-                            ActionType.MOVE);
+                            ActionType.NOTHING);
                     otherTeam.put(pacId, pac);
                 } else {
                     otherTeam.get(pacId).setX(currentX);
