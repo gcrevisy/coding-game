@@ -4,21 +4,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 /**
  * Grab the pellets as fast as you can!
  * seed=782918738956375040
  **/
-class Player {
+enum ActionType {
+    MOVE, SWITCH, SPEED, NOTHING
+}
 
-    private static List<Cellule> listeCells = new ArrayList<Cellule>();
+class Player {
     private static Map<Integer, Pac> myTeam = new HashMap<Integer, Pac>();
     private static Map<Integer, Pac> otherTeam = new HashMap<Integer, Pac>();
-    private static Map<Integer, List<Cellule>> carte;
+
+    private static String ROCK = "ROCK";
+    private static String PAPER = "PAPER";
+    private static String SCISSORS = "SCISSORS";
 
     public static void main(String args[]) {
+        List<Cellule> listeCells = new ArrayList<Cellule>();
+        Map<Integer, List<Cellule>> carte;
+
         Scanner in = new Scanner(System.in);
         int width = in.nextInt(); // size of the grid
         int height = in.nextInt(); // top left corner is (x=0, y=0)
@@ -54,7 +62,7 @@ class Player {
                 int y = in.nextInt();
                 int value = in.nextInt(); // amount of points this pellet is worth
                 Cellule cell = new Cellule(x, y, value);
-                System.err.println(cell);
+                // System.err.println(cell);
                 listeCells.add(cell);
             }
 
@@ -68,7 +76,7 @@ class Player {
      * @param carte
      * @return
      */
-    public static String action(Map<Integer, List<Cellule>> carte, List<Cellule> listeCells) {
+    public static String action(Map<Integer, List<Cellule>> carte, List<Cellule> listeVisibleCells) {
 
         String result = "";
         for (Integer pacId : myTeam.keySet()) {
@@ -77,44 +85,104 @@ class Player {
                 continue;
             }
 
-            if (pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
-                    && pac.getY() == pac.getTargetedCell().getY()) {
+            boolean arrive = pac.getTargetedCell() != null && pac.getX() == pac.getTargetedCell().getX()
+                    && pac.getY() == pac.getTargetedCell().getY();
+
+            boolean targetcelldeleted = pac.getTargetedCell() != null && pac.getTargetedCell().getValeur() == 10
+                    && !listeVisibleCells.contains(pac.getTargetedCell());
+
+            if (arrive || targetcelldeleted) {
                 pac.setTargetedCell(null);
+                pac.setActionType(ActionType.NOTHING);
             }
+
             System.err.println("avant => " + pac.getTargetedCell());
             if (pac.getTargetedCell() == null) {
-                int x = pac.getX() + pac.getId();
-                if (x >= 34) {
-                    x = 0;
+
+                // ciblage des cellule a valeur 10 en priorite
+                List<Cellule> liste = listeVisibleCells.stream().filter(item -> item.getValeur() == 10)
+                        .collect(Collectors.toList());
+                if (liste.size() > 0) {
+                    Cellule targetedCell = determinerCellulePlusProche(pac, liste);
+                    pac.setTargetedCell(targetedCell);
+                    pac.setActionType(ActionType.MOVE);
+                    liste.remove(targetedCell);
+                    listeVisibleCells.remove(targetedCell);
+                    continue;
                 }
-                List<Cellule> cells = carte.get(x);
 
-                if (pac.getY() > 7) {
-                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c1, c2));
-                } else {
-                    cells.sort((Cellule c1, Cellule c2) -> new CelluleComparator().compare(c2, c1));
+                // chasse ?
+                if (otherTeam.size() > 0) {
+                    System.err.println("pendant => " + pac.getTargetedCell());
+                    Pac otherPac = determinerPacPlusProche(pac, otherTeam);
+                    if (ROCK.equals(otherPac.getTypeId())) {
+                        pac.setTypeId(PAPER);
+                        pac.setActionType(ActionType.SWITCH);
+                        continue;
+                    } else if (PAPER.equals(otherPac.getTypeId())) {
+                        pac.setTypeId(SCISSORS);
+                        pac.setActionType(ActionType.SWITCH);
+                        continue;
+                    } else if (SCISSORS.equals(otherPac.getTypeId())) {
+                        pac.setTypeId(ROCK);
+                        pac.setActionType(ActionType.SWITCH);
+                        continue;
+                    }
+                    pac.setTargetedCell(new Cellule(otherPac.getX(), otherPac.getY(), 0));
+                    pac.setActionType(ActionType.MOVE);
                 }
-                pac.setTargetedCell(cells.get(0));
 
             }
-            if (result != "") {
-                result += " | ";
-            }
-            if (pac.getTargetedCell() != null) {
-                System.err.println("apres => " + pac.getTargetedCell());
-                result += "MOVE " + pac.getId() + " " + pac.getTargetedCell().getX() + " "
-                        + pac.getTargetedCell().getY();
-            }
+        }
 
+        for (Integer pacId : myTeam.keySet()) {
+            Pac pac = myTeam.get(pacId);
+            if (pac == null) {
+                continue;
+            }
+            System.err.println("apres => " + pac.getTargetedCell());
+            result += pac.doSomething() + " | ";
         }
 
         return result;
     }
 
+    private static Pac determinerPacPlusProche(Pac pac, Map<Integer, Pac> liste) {
+        Double proche = Double.MAX_VALUE;
+        Pac result = null;
+        for (Integer pacId : liste.keySet()) {
+
+            Pac otherPac = liste.get(pacId);
+            Double dist = Math.sqrt(Math.pow(Math.abs(pac.getX() - otherPac.getX()), 2)
+                    + Math.pow(Math.abs(pac.getY() - otherPac.getY()), 2));
+            if (dist < proche) {
+                proche = dist;
+                result = otherPac;
+            }
+        }
+        return result;
+    }
+
+    private static Cellule determinerCellulePlusProche(Pac pac, List<Cellule> liste) {
+        Double proche = Double.MAX_VALUE;
+        Cellule result = null;
+        for (Cellule cellule : liste) {
+            Double dist = Math.sqrt(Math.pow(Math.abs(pac.getX() - cellule.getX()), 2)
+                    + Math.pow(Math.abs(pac.getY() - cellule.getY()), 2));
+            if (dist < proche) {
+                proche = dist;
+                result = cellule;
+            }
+        }
+        return result;
+    }
+
     public static void initTeams(Scanner in) {
 
-        int myScore = in.nextInt();
-        int opponentScore = in.nextInt();
+        // int myScore = 
+        in.nextInt();
+        // int opponentScore = 
+        in.nextInt();
         int visiblePacCount = in.nextInt(); // all your pacs and enemy pacs in sight
         for (int i = 0; i < visiblePacCount; i++) {
             int pacId = in.nextInt(); // pac number (unique within a team)
@@ -126,7 +194,8 @@ class Player {
             int abilityCooldown = in.nextInt(); // unused in wood leagues
             if (mine) {
                 if (myTeam.get(pacId) == null) {
-                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
+                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null,
+                            ActionType.MOVE);
                     myTeam.put(pacId, pac);
                 } else {
                     myTeam.get(pacId).setX(currentX);
@@ -134,7 +203,8 @@ class Player {
                 }
             } else {
                 if (otherTeam.get(pacId) == null) {
-                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null);
+                    Pac pac = new Pac(pacId, currentX, currentY, typeId, speedTurnsLeft, abilityCooldown, null,
+                            ActionType.MOVE);
                     otherTeam.put(pacId, pac);
                 } else {
                     otherTeam.get(pacId).setX(currentX);
@@ -243,11 +313,25 @@ class Pac {
     private int speedTurnsLeft;
     private int abilityCooldown;
     private Cellule targetedCell;
+    private ActionType actionType;
+
+    public String doSomething() {
+        String result = "";
+        if (ActionType.MOVE.equals(actionType)) {
+            result += "MOVE " + getId() + " " + getTargetedCell().getX() + " " + getTargetedCell().getY();
+        } else if (ActionType.SPEED.equals(actionType)) {
+
+        } else if (ActionType.SWITCH.equals(actionType)) {
+
+        }
+        return result;
+    }
 
     public Pac() {
     }
 
-    public Pac(int id, int x, int y, String typeId, int speedTurnsLeft, int abilityCooldown, Cellule targetedCell) {
+    public Pac(int id, int x, int y, String typeId, int speedTurnsLeft, int abilityCooldown, Cellule targetedCell,
+            ActionType actionType) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -255,6 +339,7 @@ class Pac {
         this.speedTurnsLeft = speedTurnsLeft;
         this.abilityCooldown = abilityCooldown;
         this.targetedCell = targetedCell;
+        this.actionType = actionType;
     }
 
     public int getId() {
@@ -313,6 +398,14 @@ class Pac {
         this.targetedCell = targetedCell;
     }
 
+    public ActionType getActionType() {
+        return this.actionType;
+    }
+
+    public void setActionType(ActionType actionType) {
+        this.actionType = actionType;
+    }
+
     public Pac id(int id) {
         this.id = id;
         return this;
@@ -348,6 +441,11 @@ class Pac {
         return this;
     }
 
+    public Pac actionType(ActionType actionType) {
+        this.actionType = actionType;
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == this)
@@ -358,19 +456,20 @@ class Pac {
         Pac pac = (Pac) o;
         return id == pac.id && x == pac.x && y == pac.y && Objects.equals(typeId, pac.typeId)
                 && speedTurnsLeft == pac.speedTurnsLeft && abilityCooldown == pac.abilityCooldown
-                && Objects.equals(targetedCell, pac.targetedCell);
+                && Objects.equals(targetedCell, pac.targetedCell) && Objects.equals(actionType, pac.actionType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, x, y, typeId, speedTurnsLeft, abilityCooldown, targetedCell);
+        return Objects.hash(id, x, y, typeId, speedTurnsLeft, abilityCooldown, targetedCell, actionType);
     }
 
     @Override
     public String toString() {
         return "{" + " id='" + getId() + "'" + ", x='" + getX() + "'" + ", y='" + getY() + "'" + ", typeId='"
                 + getTypeId() + "'" + ", speedTurnsLeft='" + getSpeedTurnsLeft() + "'" + ", abilityCooldown='"
-                + getAbilityCooldown() + "'" + ", targetedCell='" + getTargetedCell() + "'" + "}";
+                + getAbilityCooldown() + "'" + ", targetedCell='" + getTargetedCell() + "'" + ", actionType='"
+                + getActionType() + "'" + "}";
     }
 
 }
